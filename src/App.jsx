@@ -1,33 +1,28 @@
 import SearchBar from 'components/SearchBar/SearchBar';
 import { AppWrapper } from './components/Helpers/Components.styled';
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { getImages } from 'service/api';
 import ImageGallery from 'components/ImageGallery/ImageGallery';
 import { Button } from 'components/Helpers/Helpers';
 import { Audio } from 'react-loader-spinner';
 import Modal from 'components/Modal/Modal';
 
-export class App extends Component {
-  state = {
-    page: 1,
-    images: [],
-    query: '',
-    error: null,
-    loader: false,
-    currImage: '',
-    isNewImages: true,
-  };
+export const App = () => {
+  const [page, setPage] = useState(1);
+  const [images, setImages] = useState([]);
+  const [query, setQuery] = useState('');
+  const [error, setError] = useState(null);
+  const [loader, setLoader] = useState(false);
+  const [currImage, setCurrImage] = useState('');
+  const [isNewImages, setIsNewImages] = useState(true);
 
-  componentDidUpdate(prevProps, prevState) {
-    const { page: prevPage } = prevState;
-    const { query, page } = this.state;
-    if (prevPage !== page) {
-      this.getMorePhotos(query, page);
-    }
-  }
+  useEffect(() => {
+    if (query.length > 0) getMorePhotos(query, page);
+  }, [query, page]);
 
-  getMorePhotos = async (query, page) => {
-    this.setState({ loader: true });
+  const getMorePhotos = async (query, page) => {
+    setLoader(true);
+    setError(null);
     try {
       const data = await getImages(query, page);
       const images = data.hits.map(el => {
@@ -35,72 +30,52 @@ export class App extends Component {
         const image = { id, webformatURL, largeImageURL };
         return image;
       });
-      this.setState(prevState => ({
-        images: [...prevState.images, ...images],
-      }));
+      setImages(prevImages => [...prevImages, ...images]);
+
       if (images.length >= 12) {
-        this.setState({ isNewImages: true });
+        setIsNewImages(true);
       } else {
-        this.setState({ isNewImages: false });
+        setIsNewImages(false);
       }
     } catch (error) {
-      this.setState({ error: error.message });
+      setError(error.message);
     } finally {
-      this.setState({ loader: false });
+      setLoader(false);
     }
   };
 
-  handleSubmit = async query => {
-    this.setState({ loader: true });
-    try {
-      const data = await getImages(query, this.state.page);
-      const images = data.hits.map(el => {
-        const { id, webformatURL, largeImageURL } = el;
-        const image = { id, webformatURL, largeImageURL };
-        return image;
-      });
-      this.setState({ images, query, page: 1 });
-    } catch (error) {
-      this.setState({ error: error.message });
-    } finally {
-      this.setState({ loader: false });
-    }
+  const handleSubmit = query => {
+    setQuery(query);
+    setPage(1);
   };
 
-  loadMore = async () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const loadMore = () => {
+    setPage(page + 1);
   };
 
-  showModal = currImage => {
-    this.setState({ currImage });
+  const showModal = currImage => {
+    setCurrImage(currImage);
   };
 
-  closeModal = () => {
-    this.setState({ currImage: '' });
+  const closeModal = () => {
+    setCurrImage('');
   };
 
-  render() {
-    const {
-      state: { images, loader, currImage, isNewImages },
-      handleSubmit,
-      loadMore,
-      showModal,
-      closeModal,
-    } = this;
-    return (
-      <AppWrapper>
-        <SearchBar onSubmit={handleSubmit} />
-        {images.length > 1 ? (
-          <ImageGallery images={images} showModal={showModal} />
-        ) : (
+  return (
+    <AppWrapper>
+      <SearchBar onSubmit={handleSubmit} />
+      {images.length > 1 ? (
+        <ImageGallery images={images} showModal={showModal} />
+      ) : (
+        (error && <span>{error}</span>) || (
           <span>Nothing to show right now</span>
-        )}
-        {images.length > 0 && !loader && isNewImages && (
-          <Button onClick={loadMore} />
-        )}
-        {loader && <Audio />}
-        {currImage && <Modal largeImage={currImage} closeModal={closeModal} />}
-      </AppWrapper>
-    );
-  }
-}
+        )
+      )}
+      {images.length > 0 && !loader && isNewImages && (
+        <Button onClick={loadMore} />
+      )}
+      {loader && <Audio />}
+      {currImage && <Modal largeImage={currImage} closeModal={closeModal} />}
+    </AppWrapper>
+  );
+};

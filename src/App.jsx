@@ -30,7 +30,10 @@ export const App = () => {
         const image = { id, webformatURL, largeImageURL };
         return image;
       });
-      setImages(prevImages => [...prevImages, ...images]);
+
+      page > 1
+        ? setImages(prevImages => [...prevImages, ...images])
+        : setImages(images);
 
       if (images.length >= 12) {
         setIsNewImages(true);
